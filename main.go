@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -24,33 +26,51 @@ func main() {
 }
 
 func tryPasswords(length int, correctPassword string) {
-	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
 	current := make([]byte, length)
 	var attemptInt int64 = 0
+	startTime := time.Now()
 
 	// Initialize the password with the first character
 	for i := 0; i < length; i++ {
 		current[i] = chars[0]
 	}
 
+	// Calculate total possible combinations
+	totalCombinations := math.Pow(float64(len(chars)), float64(length))
+
+	fmt.Printf("\nStarting password cracking...\n")
+	fmt.Printf("Possible combinations: %.0f\n", totalCombinations)
+	fmt.Printf("Character set size: %d\n", len(chars))
+	fmt.Printf("Password length: %d\n\n", length)
+
 	for {
-		// Process current password attempt
-		attempt := string(current)
-		fmt.Printf("Trying: %s (Attempt: %d)\n", attempt, attemptInt)
-
 		attemptInt++
+		attempt := string(current)
 
-		// Check if we found the password
+		// Print progress every 10000 attempts or use \r to update same line
+		if attemptInt%10000 == 0 || attempt == correctPassword {
+			elapsed := time.Since(startTime)
+			progress := (float64(attemptInt) / totalCombinations) * 100
+			speed := float64(attemptInt) / elapsed.Seconds()
+
+			fmt.Printf("\rProgress: %.2f%% | Attempts: %d | Speed: %.0f/s | Current: %s",
+				progress, attemptInt, speed, attempt)
+		}
+
 		if attempt == correctPassword {
-			fmt.Printf("Password found: %s\n", attempt)
-			return // Exit the function when password is found
+			elapsed := time.Since(startTime)
+			fmt.Printf("\n\n🎉 Password found: %s\n", attempt)
+			fmt.Printf("⏱️  Time taken: %s\n", elapsed.Round(time.Millisecond))
+			fmt.Printf("🔢 Total attempts: %d\n", attemptInt)
+			return
 		}
 
 		// Generate next password
 		i := length - 1
 		for i >= 0 {
 			pos := strings.IndexByte(chars, current[i])
-			if pos < utf8.RuneCountInString(chars)-1 {
+			if pos < len(chars)-1 {
 				current[i] = chars[pos+1]
 				break
 			}
@@ -58,9 +78,10 @@ func tryPasswords(length int, correctPassword string) {
 			i--
 		}
 
-		// If we've gone through all possibilities without finding it
 		if i < 0 {
-			fmt.Println("Password not found!")
+			elapsed := time.Since(startTime)
+			fmt.Printf("\n❌ Password not found after %d attempts\n", attemptInt)
+			fmt.Printf("⏱️  Time taken: %s\n", elapsed.Round(time.Millisecond))
 			return
 		}
 	}
